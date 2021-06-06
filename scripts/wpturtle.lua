@@ -15,7 +15,7 @@ local endPosZ = 0
 local isReturning = false
 
 
-turtleStatus = {
+local turtleStatus = {
     code = 200,
     message = "taking a break..."
 }
@@ -233,7 +233,6 @@ local function checkForBlocks(names, cb)
 end
 
 function moveForwardTraverse(opts, onMove)
-    printLoc()
     if opts.cb ~= nil and opts.names ~= nil then
         checkForBlocks(opts.names, opts.cb)
     end
@@ -245,6 +244,7 @@ function moveForwardTraverse(opts, onMove)
                 return false
             end
             moveUp()
+            moveForward()
             if opts.cb ~= nil and opts.names ~= nil then
                 checkForBlocks(opts.names, opts.cb)
             end
@@ -389,7 +389,6 @@ function topBlockIsIn(names)
     end
     return false
 end
-
 
 function spinSearch(names)
     for i = 1, 4, 1 do

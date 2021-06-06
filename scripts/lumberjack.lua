@@ -2,9 +2,14 @@
 -- 1 - fuel
 -- 2 - saplings
 
-function placeSapling(slot)
-    turtle.selectSlot(slot)
-    turtle.place()
+local Args = { ... }
+
+function placeSapling()
+    local saplingSlot = findSlotItemByName({"sapling"})
+    if saplingSlot then
+        turtle.select(saplingSlot)
+        turtle.place() 
+    end
 end
 
 -- turtle needs to start at base
@@ -29,10 +34,7 @@ function cutTree(params)
     end
     
     goBack(params["pos"])
-    local saplingSlot = findSlotItemByName({"sapling"})
-    if saplingSlot then
-        placeSapling(saplingSlot)
-    end
+    placeSapling(saplingSlot)
 end
 
 local function handleDetect(params)
@@ -66,6 +68,8 @@ local function start()
     SetTurtleStatus("cutting wood...")
     pollArea({"log", "leaves", "leaf"}, handleDetect, onMove)
     SetTurtleStatus("taking a break...")
+    dropAllByName({"log"}, "down")
+    dropAllByName({"sapling"}, "up")
 end
 
 start()

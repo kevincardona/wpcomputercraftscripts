@@ -1,7 +1,9 @@
 startup.lua
 update.lua
 lock.lua
+helpers.lua
 wpserver.lua
+wpclient.lua
 wpturtle.lua
 lumberjack.lua
 farmer.lua

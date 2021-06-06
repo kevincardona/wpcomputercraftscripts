@@ -2,6 +2,8 @@
 plants = {"wheat", "aubergine", "hemp"}
 ----------------------------------------
 
+local Args = { ... }
+
 local function handleDetect(params)
     local index = params["index"]
     local direction = params["direction"]
@@ -21,4 +23,6 @@ local function start()
     SetTurtleStatus("taking a break...")
 end
 
-start()
+if Args[1] == "false" then
+    start()
+end
