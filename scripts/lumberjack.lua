@@ -1,12 +1,14 @@
--- name of turtle command center
-dofile("wpturtle")
-
 -- INVENTORY SLOTS
 -- 1 - fuel
 -- 2 - saplings
 
+function placeSapling(slot)
+    turtle.selectSlot(slot)
+    turtle.place()
+end
+
 -- turtle needs to start at base
-function cutTree()
+function cutTree(params)
     local y = 0
     turtle.dig()
     moveForward()
@@ -18,12 +20,18 @@ function cutTree()
         end
         if not topBlockIsIn({"log"}) then
             while moveDown() do end
-            return
+            break
         else
             turtle.digUp()
             moveUp()
             y = y + 1
         end
+    end
+    
+    goBack(params["pos"])
+    local saplingSlot = findSlotItemByName({"sapling"})
+    if saplingSlot then
+        placeSapling(saplingSlot)
     end
 end
 
@@ -35,13 +43,15 @@ local function handleDetect(params)
         print("Found leaves")
         if direction == "front" then
             turtle.dig()
-        else
+        elseif direction == "up" then
             turtle.digUp()
+        elseif direction == "down" then
+            turtle.digDown()
         end
     elseif tonumber(index) == 1 then
         print("Found tree!")
         if direction == "front" then
-            cutTree() 
+            cutTree(params) 
         else
             turtle.digUp()
         end
@@ -55,7 +65,7 @@ end
 local function start()
     SetTurtleStatus("cutting wood...")
     pollArea({"log", "leaves", "leaf"}, handleDetect, onMove)
-    
+    SetTurtleStatus("taking a break...")
 end
 
 start()

@@ -1,0 +1,2 @@
+local base_site="http://kevins.ngrok.io/";local request=http.get(base_site.. "/index");if request == nil then return false end; local filename=request.readLine();while filename do local fileRes=http.get(base_site..filename);local file=fs.open(filename:sub(1, -5), "w");file.write(fileRes.readAll());print("Saving file "..filename: sub(1, -5).. "...");file.close();filename=request.readLine();end print(request.readAll()); return true;
+-- copy and paste this into computer and files will be downloaded as specified by endpoint <base_site>/index

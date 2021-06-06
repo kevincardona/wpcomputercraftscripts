@@ -17,7 +17,7 @@ local isReturning = false
 
 turtleStatus = {
     code = 200,
-    message = "waiting for command..."
+    message = "taking a break..."
 }
 
 function SetTurtleStatus(message, code)
@@ -182,19 +182,19 @@ function printLoc()
 end
 
 function moveForward()
-    if turtle.detect() then
-        return false
-    end
-    repeat until turtle.forward()
+    local success = turtle.forward()
+    if not success then return false end
     posX = posX + accelX()
     posZ = posZ + accelZ()
     if tracking_movement then
         table.insert(tracked_history, rotMod())
     end
+    return true
 end
 
 function moveForwardTracked(history)
-    repeat until turtle.forward()
+    local success = turtle.forward()
+    if not success then return false end
     posX = posX + accelX()
     posZ = posZ + accelZ()
     table.insert(history, rotMod())
@@ -206,50 +206,57 @@ local function checkForBlocks(names, cb)
     for i = 1, #names, 1 do
         if success and string.find(data.name, names[i]) then
             local backup = backupPosition()
-            cb({direction = "front", index = i})
+            cb({direction = "front", index = i, pos = backup})
             goBack(backup)
             return true
         end
     end
-    if success == true then
-        success, data = turtle.inspectUp()
-        for i = 1, #names, 1 do
-            if success and string.find(data.name, names[i]) then
-                local backup = backupPosition()
-                cb({direction = "top", index = i})
-                goBack(backup)
-                return true
-            end
+    success, data = turtle.inspectUp()
+    for i = 1, #names, 1 do
+        if success and string.find(data.name, names[i]) then
+            local backup = backupPosition()
+            cb({direction = "up", index = i})
+            goBack(backup)
+            return true
+        end
+    end
+    success, data = turtle.inspectDown()
+    for i = 1, #names, 1 do
+        if success and string.find(data.name, names[i]) then
+            local backup = backupPosition()
+            cb({direction = "down", index = i})
+            goBack(backup)
+            return true
         end
     end
     return false
 end
-
 
 function moveForwardTraverse(opts, onMove)
     printLoc()
     if opts.cb ~= nil and opts.names ~= nil then
         checkForBlocks(opts.names, opts.cb)
     end
-    while turtle.detect() do
-        if turtle.detectUp() then
-            print("TURTLE STUCK")
-            SetTurtleStatus("stuck!", 500)
-            return false
+    if not moveForward() then
+        while turtle.detect() do
+            if turtle.detectUp() then
+                print("TURTLE STUCK")
+                SetTurtleStatus("stuck!", 500)
+                return false
+            end
+            moveUp()
+            if opts.cb ~= nil and opts.names ~= nil then
+                checkForBlocks(opts.names, opts.cb)
+            end
         end
-        moveUp()
-        if opts.cb ~= nil and opts.names ~= nil then
-            checkForBlocks(opts.names, opts.cb)
+    else
+        if onMove ~= nil then
+            onMove()
+        end
+        while not turtle.detectDown() do
+            moveDown()
         end
     end
-    moveForward()
-    if onMove ~= nil then
-        onMove()
-    end
-    while not turtle.detectDown() do
-        moveDown()
-    end
-    SurtleStatus = "good"
 end
 
 function moveBackward()
@@ -332,6 +339,21 @@ function findAllInventoryByName(names)
     return res
 end
 
+function findSlotItemByName(names)
+    for i = 1, 16, 1 do
+        turtle.select(i)
+        local data = turtle.getItemDetail()
+        if data ~= nil then
+            for j = 1, #names, 1 do
+                if string.find(data.name, names[j]) then
+                    return i
+                end 
+            end
+        end
+    end
+    return false
+end
+
 function dropAllByName(names, direction)
     local slots = findAllInventoryByName(names)
     if slots ~= nil then
@@ -377,10 +399,6 @@ function spinSearch(names)
         turnLeft()
     end
     return false
-end
-
-function findItemsInInventory(names)
-
 end
 
 function backtrack()
@@ -439,19 +457,18 @@ function promptUserForBounds()
 end
 
 -- handleDetect is a callback and takes params with { status: "", direction: ""}
-function pollArea(names, handleDetect)
+function pollArea(names, handleDetect, onMove)
     if not boundsAreSet then promptUserForBounds() end
     turnTowards(endPosX, endPosZ)
     while true do
         if posX == startPosX and posZ == startPosZ and isReturning then
             print("Turtle is all done!")
-            SetTurtleStatus("waiting for command...", 200)
             goBack({startPosX,startPosY,startPosZ,startRot % 4 + 1})
             isReturning = false
-            return "done"
+            return true
         end
 
-        checkForBlocks(names, handleDetect, onMove)
+        checkForBlocks(names, handleDetect)
 
         -- TODO: Make it so it can start north south east west of corner
         if posX == endPosX and posZ == endPosZ then
