@@ -1,0 +1,6 @@
+{
+    "scripts": {
+        "start-win": "start ngrok http -subdomain=kevins 8080 & start node server.js",
+        "start": "ngrok http -subdomain=kevins 8080 & node server.js"
+    }
+}
