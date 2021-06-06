@@ -1,6 +1,10 @@
 -- name of turtle command center
 dofile("wpturtle")
 
+-- INVENTORY SLOTS
+-- 1 - fuel
+-- 2 - saplings
+
 -- turtle needs to start at base
 function cutTree()
     local y = 0
@@ -44,9 +48,14 @@ local function handleDetect(params)
     end
 end
 
+local function onMove(params)
+    turtle.suck()
+end
+
 local function start()
     SetTurtleStatus("cutting wood...")
-    pollArea({"log", "leaves", "leaf"}, handleDetect)
+    pollArea({"log", "leaves", "leaf"}, handleDetect, onMove)
+    
 end
 
 start()

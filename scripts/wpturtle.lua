@@ -197,9 +197,8 @@ function moveForwardTracked(history)
     repeat until turtle.forward()
     posX = posX + accelX()
     posZ = posZ + accelZ()
-    if tracking_movement then
-        table.insert(history, rotMod())
-    end
+    table.insert(history, rotMod())
+    return history
 end
 
 local function checkForBlocks(names, cb)
@@ -227,7 +226,7 @@ local function checkForBlocks(names, cb)
 end
 
 
-function moveForwardTraverse(opts)
+function moveForwardTraverse(opts, onMove)
     printLoc()
     if opts.cb ~= nil and opts.names ~= nil then
         checkForBlocks(opts.names, opts.cb)
@@ -244,6 +243,9 @@ function moveForwardTraverse(opts)
         end
     end
     moveForward()
+    if onMove ~= nil then
+        onMove()
+    end
     while not turtle.detectDown() do
         moveDown()
     end
@@ -268,13 +270,28 @@ function moveUp()
     return true
 end
 
+local function retraceSteps(steps)
+    for i = #steps, 1, -1 do
+        if steps[i] == 5 then
+            moveDown()
+        elseif steps[i] == 6 then
+            moveUp()
+        else
+            faceOppositeDirectionRot(steps[i])
+            moveForward()
+        end
+    end
+end
+
 function mineVein(names)
-    local history = {}
+    local backup = backupPosition()
+    local veinHistory = {}
     while spinSearch(names) do
         turtle.dig()
-        moveForwardTracked(history)
+        veinHistory = moveForwardTracked(veinHistory)
     end
-    retraceSteps(history)
+    retraceSteps(veinHistory)
+    goBack(backup)
 end
 
 function moveDown()
@@ -297,6 +314,38 @@ end
 function turnRight()
     rot = rot + 1
     repeat until turtle.turnRight()
+end
+
+function findAllInventoryByName(names)
+    local res = {}
+    for i = 1, 16, 1 do
+        turtle.select(i)
+        local data = turtle.getItemDetail()
+        if data ~= nil then
+            for j = 1, #names, 1 do
+                if string.find(data.name, names[j]) then
+                    table.insert(res, i)
+                end 
+            end
+        end
+    end
+    return res
+end
+
+function dropAllByName(names, direction)
+    local slots = findAllInventoryByName(names)
+    if slots ~= nil then
+        for i = 1, #slots, 1 do
+            turtle.select(slots[i])
+            if direction == "down" then
+                turtle.dropDown()
+            elseif direction == "up" then
+                turtle.dropUp()
+            else
+                turtle.drop()
+            end
+        end
+    end
 end
 
 function frontBlockIsIn(names)
@@ -330,17 +379,8 @@ function spinSearch(names)
     return false
 end
 
-function retraceSteps(steps)
-    for i = #steps, 1, -1 do
-        if steps[i] == 5 then
-            moveDown()
-        elseif steps[i] == 6 then
-            moveUp()
-        else
-            faceOppositeDirectionRot(steps[i])
-            moveForward()
-        end
-    end
+function findItemsInInventory(names)
+
 end
 
 function backtrack()
@@ -363,6 +403,7 @@ function goBack(position)
     faceDirectionRot(position[4])
 end
 
+local boundsAreSet = false
 function promptUserForBounds()
     print("What bounding system should we use?\n\n1.relative  2. coords")
     local input = tonumber(read())
@@ -394,11 +435,12 @@ function promptUserForBounds()
         z = tonumber(read())
         setBounds(x,y,z)
     end
+    boundsAreSet = true
 end
 
 -- handleDetect is a callback and takes params with { status: "", direction: ""}
 function pollArea(names, handleDetect)
-    promptUserForBounds()
+    if not boundsAreSet then promptUserForBounds() end
     turnTowards(endPosX, endPosZ)
     while true do
         if posX == startPosX and posZ == startPosZ and isReturning then
@@ -409,7 +451,7 @@ function pollArea(names, handleDetect)
             return "done"
         end
 
-        checkForBlocks(names, handleDetect)
+        checkForBlocks(names, handleDetect, onMove)
 
         -- TODO: Make it so it can start north south east west of corner
         if posX == endPosX and posZ == endPosZ then
@@ -419,19 +461,19 @@ function pollArea(names, handleDetect)
 
         if isReturning == true then
             turnTowards(startPosX, startPosZ)
-            moveForwardTraverse({names = names, cb = handleDetect})
+            moveForwardTraverse({names = names, cb = handleDetect}, onMove)
         else
             directionTo(endPosX, endPosZ)
             if ((posX + accelX() == endPosX) or posX + accelX() == startPosX) and not(accelX == 0) then
-                moveForwardTraverse({names = names, cb = handleDetect})
+                moveForwardTraverse({names = names, cb = handleDetect}, onMove)
                 print("Moving to next row...")
                 local tempAccelX = accelX()
                 turnTowardsZ(endPosX, endPosZ)
                 checkForBlocks(names, handleDetect)
-                moveForwardTraverse({names = names, cb = handleDetect})
+                moveForwardTraverse({names = names, cb = handleDetect}, onMove)
                 setAccelX(tempAccelX * -1)
             else
-                moveForwardTraverse({names = names, cb = handleDetect})
+                moveForwardTraverse({names = names, cb = handleDetect}, onMove)
             end
         end
     end
