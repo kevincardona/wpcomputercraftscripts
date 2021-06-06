@@ -45,9 +45,8 @@ local function handleDetect(params)
 end
 
 local function start()
+    SetTurtleStatus("cutting wood...")
     pollArea({"log", "leaves", "leaf"}, handleDetect)
 end
 
-setStartDirection(-635,76,-121, "south")
-setCorner(-644,71,-120)
 start()

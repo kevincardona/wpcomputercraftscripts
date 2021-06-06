@@ -1,6 +1,6 @@
 -- insert assert(loadfile("fgps")) at start of file to load this lib
 -- north south east or west
-local startDirection = "north"
+local startDirection = "south"
 
 -- what coordinate the turtle is at 
 local startPosX = 0
@@ -14,7 +14,20 @@ local endPosZ = 0
 
 local isReturning = false
 
-local turtleStatus = "good"
+
+turtleStatus = {
+    code = 200,
+    message = "waiting for command..."
+}
+
+function SetTurtleStatus(message, code)
+    turtleStatus["message"] = message
+    if code then turtleStatus["code"] = code end
+end
+
+function getTurtleStatus()
+    return turtleStatus
+end
 
 local startRot = 0
 
@@ -36,6 +49,7 @@ end
 
 local function setStartRot(direction)
     startRot = getRotVal(direction)
+    rot = startRot
 end
 
 startRot = getRotVal(startDirection)
@@ -61,18 +75,17 @@ function setStartDirection(x,y,z,direction)
     startPosZ = z
     startDirection = direction
     setStartRot(direction)
-    rot = startRot
 end
 
-function setCorner(x,y,z)
+function setBounds(x,y,z)
     endPosX = x
-    endPosY = y - 1
+    endPosY = y
     endPosZ = z
 end
 
 local function directionFromTo(x,z,x2,z2)
-    resX = 0
-    resZ = 0
+    local resX = 0
+    local resZ = 0
     if x2 > x then
         resX = 1
     elseif x2 < x then
@@ -222,7 +235,7 @@ function moveForwardTraverse(opts)
     while turtle.detect() do
         if turtle.detectUp() then
             print("TURTLE STUCK")
-            turtleStatus = "stuck"
+            SetTurtleStatus("stuck!", 500)
             return false
         end
         moveUp()
@@ -234,7 +247,7 @@ function moveForwardTraverse(opts)
     while not turtle.detectDown() do
         moveDown()
     end
-    turtleStatus = "good"
+    SurtleStatus = "good"
 end
 
 function moveBackward()
@@ -350,13 +363,47 @@ function goBack(position)
     faceDirectionRot(position[4])
 end
 
+function promptUserForBounds()
+    print("What bounding system should we use?\n\n1.relative  2. coords")
+    local input = tonumber(read())
+    if input == 1 then
+        print("How far forward should we go from here?\n (negative for back)")
+        z = tonumber(read())
+        print("How far to the side should we go from here?\n (negative for left)")
+        x = tonumber(read())
+        setBounds(x * -1,0,z)
+    else
+        local x, y, z = gps.locate()
+        if x == nil then
+            print("\nIt looks like there's no GPS signal\n Looks like we'll have to do this manually...")
+            print("Enter starting x coordinate:")
+            x = tonumber(read())
+            print("Enter starting y coordinate:")
+            y = tonumber(read())
+            print("Enter starting z coordinate:")
+            z = tonumber(read())
+            print("\nWhich direction is it facing?\n\n1. north 2. east 3. south 4. west")
+            local dir = tonumber(read())
+            setStartDirection(x,y,z,directionMap[dir])
+        end
+        print("Enter end x coordinate:")
+        x = tonumber(read())
+        print("Enter end y coordinate:")
+        y = tonumber(read())
+        print("Enter end z coordinate:")
+        z = tonumber(read())
+        setBounds(x,y,z)
+    end
+end
+
 -- handleDetect is a callback and takes params with { status: "", direction: ""}
 function pollArea(names, handleDetect)
+    promptUserForBounds()
     turnTowards(endPosX, endPosZ)
     while true do
         if posX == startPosX and posZ == startPosZ and isReturning then
             print("Turtle is all done!")
-            turtleStatus = "done"
+            SetTurtleStatus("waiting for command...", 200)
             goBack({startPosX,startPosY,startPosZ,startRot % 4 + 1})
             isReturning = false
             return "done"
